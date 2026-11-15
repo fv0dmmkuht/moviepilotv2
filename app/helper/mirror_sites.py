@@ -51,7 +51,40 @@ def register() -> None:
             helper.add_indexer(key, _merge(sites.get(key), entry))
         except Exception:
             continue
+    _ensure_site_cards()
     _install_site_test()
+
+def _ensure_site_cards() -> None:
+    import sqlite3
+    from datetime import datetime
+    from app.core.config import settings
+    try:
+        db_path = settings.CONFIG_PATH / 'user.db'
+        if not db_path.exists():
+            return
+        host = mirror_host()
+        con = sqlite3.connect(str(db_path), timeout=10)
+        try:
+            con.execute('PRAGMA busy_timeout=8000')
+            exists = con.execute("SELECT name FROM sqlite_master WHERE type='table' AND name='site'").fetchone()
+            if not exists:
+                return
+            current = {row[0] for row in con.execute('SELECT domain FROM site')}
+            now = datetime.now().strftime('%Y-%m-%d %H:%M:%S')
+            for index, (slug, name) in enumerate(SITES, start=1):
+                domain = f'{host}/{slug}'
+                if domain in current:
+                    continue
+                con.execute('INSERT INTO site (name, domain, url, pri, rss, cookie, ua, apikey, token, proxy, filter, render, public, note, limit_interval, limit_count, limit_seconds, timeout, is_active, downloader, lst_mod_date) VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)', (name, domain, f'https://{host}/{slug}/', 10 + index, '', '', '', '', '', 0, '', 0, 0, None, 0, 0, 0, 15, 1, None, now))
+            con.commit()
+        finally:
+            con.close()
+    except Exception as err:
+        try:
+            from app.log import logger
+            logger.warning(f'mirror site cards skipped: {err}')
+        except Exception:
+            pass
 
 def _probe(site):
     from app.core.config import settings
