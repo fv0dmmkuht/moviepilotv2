@@ -25,8 +25,8 @@ VENV_PATH="${VENV_PATH:-/opt/venv}"
 export PATH="${VENV_PATH}/bin:$PATH"
 
 CONFIG_DIR="${CONFIG_DIR:-/config}"
-MTP_APP_ZIP="${MTP_APP_ZIP:-https://github.com/fv0dmmkuht/moviepilot/archive/refs/heads/main.zip}"
-MTP_VERSION_RAW="${MTP_VERSION_RAW:-https://raw.githubusercontent.com/fv0dmmkuht/moviepilot/main/version.py}"
+MTP_APP_ZIP="${MTP_APP_ZIP:-https://github.com/fv0dmmkuht/moviepilotv2/archive/refs/heads/main.zip}"
+MTP_VERSION_RAW="${MTP_VERSION_RAW:-https://raw.githubusercontent.com/fv0dmmkuht/moviepilotv2/main/version.py}"
 
 function apply_package_cache_env() {
     PACKAGE_CACHE_ROOT="${PACKAGE_CACHE_ROOT:-${CONFIG_DIR}/.cache}"
