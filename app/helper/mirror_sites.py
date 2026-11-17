@@ -86,6 +86,38 @@ def _ensure_site_cards() -> None:
         except Exception:
             pass
 
+def legacy_keys() -> list:
+    return [entry['domain'] for entry in LEGACY_SITES]
+
+def _probe_legacy(site):
+    from app.core.config import settings
+    from app.utils.http import RequestUtils
+    token = token_of(site)
+    if not token:
+        return (False, '未配置 API 密钥')
+    base = str(getattr(site, 'url', '') or getattr(site, 'domain', '') or '').strip().rstrip('/')
+    if not base:
+        return (False, '站点地址为空')
+    if '://' not in base:
+        base = 'https://' + base
+    headers = {'Accept': 'application/json', 'Authorization': f'Bearer {token}'}
+    res = RequestUtils(headers=headers, proxies=settings.PROXY if getattr(site, 'proxy', 0) else None, timeout=getattr(site, 'timeout', 0) or 15).get_res(f'{base}/api/local/user/me')
+    if res is None:
+        return (False, '无法连接站点')
+    if res.status_code == 200:
+        try:
+            payload = res.json() or {}
+        except Exception:
+            payload = {}
+        if (payload.get('data') or {}).get('user'):
+            return (True, '连接成功')
+        return (False, '密钥无效或返回异常')
+    if res.status_code == 401:
+        return (False, 'API 密钥无效或未登录')
+    if res.status_code == 403:
+        return (False, '令牌仅支持只读访问或账号受限')
+    return (False, f'错误：{res.status_code}')
+
 def _probe(site):
     from app.core.config import settings
     from app.utils.http import RequestUtils
@@ -118,6 +150,8 @@ def _install_site_test() -> None:
         try:
             for key in site_keys() + site_hosts():
                 self.special_site_test[key] = _probe
+            for key in legacy_keys():
+                self.special_site_test[key] = _probe_legacy
         except Exception:
             pass
     SiteChain.__init__ = __init__
